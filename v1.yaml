@@ -18,18 +18,17 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       AvailabilityZone: eu-west-1a
-      CidrBlock: !Select [ 100, !Cidr [ !GetAtt VPC.CidrBlock, 101, 8 ]]
+      CidrBlock: 10.0.1.0/24
       Tags:
         - Key: Name
           Value: 'MainVPC-public-a'
       VpcId: !Ref VPC
       MapPublicIpOnLaunch: True
-
   PublicSubnetB:
     Type: 'AWS::EC2::Subnet'
     Properties:
       AvailabilityZone: eu-west-1b
-      CidrBlock: !Select [ 101, !Cidr [ !GetAtt VPC.CidrBlock, 102, 8 ]]
+      CidrBlock: 10.0.2.0/24
       Tags:
         - Key: Name
           Value: 'MainVPC-public-b'
@@ -197,6 +196,7 @@ Resources:
         tar xzvf latest.tar.gz
         systemctl daemon-reload
         systemctl restart docker
+      ClassicLinkVPCId: !Ref VPC  
   WebServerAS:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
@@ -205,9 +205,9 @@ Resources:
       LaunchConfigurationName: !Ref Docker
       MinSize: 1
       MaxSize: 2
-      AvailabilityZones:
-        Fn::GetAZs: 
-          Ref: "AWS::Region"       
+      VPCZoneIdentifier:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB      
   ScalingUpPolicy:    
     Type: 'AWS::AutoScaling::ScalingPolicy'
     Properties: 
