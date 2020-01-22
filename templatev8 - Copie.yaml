@@ -1,0 +1,277 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  AWS CloudFormation VPC Template
+Parameters:
+  VpcCidrBlock:
+    Type: 'String'
+    Default: 10.0.0.0/16
+    Description: Enter the main VPC CIDR block.
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      Tags:
+        - Key: Name
+          Value: 'MainVPC'
+  PublicSubnetA:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: eu-west-1a
+      CidrBlock: !Select [ 100, !Cidr [ !GetAtt VPC.CidrBlock, 101, 8 ]]
+      Tags:
+        - Key: Name
+          Value: 'MainVPC-public-a'
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: True
+
+  PublicSubnetB:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: eu-west-1b
+      CidrBlock: !Select [ 101, !Cidr [ !GetAtt VPC.CidrBlock, 102, 8 ]]
+      Tags:
+        - Key: Name
+          Value: 'MainVPC-public-b'
+      VpcId: !Ref VPC
+      MapPublicIpOnLaunch: True
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: 'MainVPC-InternetGateway'
+  AttachInternetGateway:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  PublicRouteTableA:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: MainVPC-route-public-a
+  AttachPublicRouteTableA:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTableA
+      SubnetId: !Ref PublicSubnetA
+  PublicRouteTableB:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: MainVPC-route-public-b
+  AttachPublicRouteTableB:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref PublicRouteTableB
+      SubnetId: !Ref PublicSubnetB
+  PublicRouteA:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTableA
+  PublicRouteB:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref PublicRouteTableB
+  ApplicationLoadBalancer:
+    Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
+    Properties: 
+      IpAddressType: ipv4
+      Subnets: 
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+  myDNSRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: ZVX7CC41DQQ7B
+      Name: marvin-a.site.
+      Type: SPF
+      TTL: '900'
+      ResourceRecords:
+        - '"v=spf1 ip4:10.0.0.1/16 -all"'
+  ALBListener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref ALBTargetGroup
+      LoadBalancerArn: !Ref ApplicationLoadBalancer
+      Port: '80'
+      Protocol: HTTP
+  ALBTargetGroup:
+    Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
+      VpcId: !Ref VPC
+      TargetGroupAttributes:
+        - Key: stickiness.enabled
+          Value: 'true'
+        - Key: stickiness.type
+          Value: lb_cookie
+        - Key: stickiness.lb_cookie.duration_seconds
+          Value: '30'
+  WebServerSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Enable HTTP access via port 80 locked down to the ELB and SSH access
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          SourceSecurityGroupId: !Select 
+            - 0
+            - !GetAtt 
+              - ApplicationLoadBalancer
+              - SecurityGroups
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+      VpcId: !Ref VPC
+  DBEC2SecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Open database for access
+      VpcId: !Ref VPC
+  IngressRule:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      FromPort: "3306"
+      ToPort: "3306"
+      GroupId: !Ref DBEC2SecurityGroup
+      IpProtocol: tcp
+      CidrIp: 0.0.0.0/0
+  myDBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup' 
+    Properties: 
+      DBSubnetGroupDescription: description
+      SubnetIds: 
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+      Tags: 
+        - 
+          Key: Name
+          Value: VPCSubRDS      
+  DBInstance:
+    Type: 'AWS::RDS::DBInstance'
+    Properties:
+      Engine: MySQL
+      MultiAZ: true
+      DBInstanceClass: db.t2.micro
+      AllocatedStorage: 20
+      DBSubnetGroupName: !Ref myDBSubnetGroup
+      PubliclyAccessible: false 
+      DBSnapshotIdentifier: arn:aws:rds:eu-west-1:648183606597:snapshot:wordpress  
+      VPCSecurityGroups: 
+          - !Ref DBEC2SecurityGroup
+  Docker:
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    Properties: 
+      ImageId: ami-07a3c7461cc82f8ff
+      InstanceType: t2.micro
+      KeyName: wordpress
+      SecurityGroups: 
+      - !Ref WebServerSecurityGroup
+      UserData: !Base64 |
+        #!/bin/bash
+        apt-get update -qq
+        apt-get install -y apt-transport-https ca-certificates
+        apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+        echo "deb https://apt.dockerproject.org/repo ubuntu-xenial main" | tee /etc/apt/sources.list.d/docker.list
+        apt-get update -qq
+        apt-get purge lxc-docker || true
+        apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
+        apt-get -y install docker-engine
+        usermod -aG docker ubuntu
+        mkdir -p /etc/systemd/system/docker.service.d
+        printf "[Service]\nExecStart=\nExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375\n" >>  /etc/systemd/system/docker.service.d/docker.conf
+        docker pull wordpress
+        https://wordpresswp.s3-eu-west-1.amazonaws.com/temp/latest.tar.gz /etc/www/html/
+        cd /etc/www/html/
+        tar xzvf latest.tar.gz
+        systemctl daemon-reload
+        systemctl restart docker
+  WebServerAS:
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    Properties: 
+      LaunchConfigurationName: !Ref Docker
+      TargetGroupARNs: 
+        - !Ref ALBTargetGroup
+      MaxSize: 2
+      MinSize: 1
+      VPCZoneIdentifier: 
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB        
+  ScalingUpPolicy:    
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties: 
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref WebServerAS
+      PolicyType: SimpleScaling
+      Cooldown: 300
+      ScalingAdjustment: 1
+  ScalingDownPolicy:    
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties: 
+      AdjustmentType: ChangeInCapacity
+      AutoScalingGroupName: !Ref WebServerAS
+      Cooldown: 300
+      PolicyType: SimpleScaling
+      ScalingAdjustment: -1
+  Notification:
+    Type: 'AWS::SNS::Topic'
+    Properties: 
+      DisplayName: Mailtest
+      Subscription: 
+        - Endpoint: marvin.asselino@laposte.net
+          Protocol: email
+      TopicName: Mailtest
+  CPUHighAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties: 
+      AlarmActions: 
+        - !Ref ScalingUpPolicy
+        - !Ref Notification
+      AlarmDescription: Alarm if CPU load is high
+      AlarmName: CPUHighAlarm
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions: 
+        - Name: AutoScalingGroupName
+        - Value: !Ref WebServerAS
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 300
+      Statistic: Average
+      Threshold: 75
+  CPULowAlarm:
+    Type: 'AWS::CloudWatch::Alarm'
+    Properties: 
+      AlarmActions: 
+        - !Ref ScalingDownPolicy
+        - !Ref Notification
+      AlarmDescription: Alarm if CPU load is low.
+      AlarmName: CPULowAlarm
+      ComparisonOperator: LessThanThreshold
+      Dimensions: 
+        - Name: AutoScalingGroupName
+        - Value: !Ref WebServerAS
+      EvaluationPeriods: 1
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Period: 300
+      Statistic: Average
+      Threshold: 25        
