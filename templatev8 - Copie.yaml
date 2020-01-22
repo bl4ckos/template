@@ -117,13 +117,6 @@ Resources:
       Protocol: HTTP
       UnhealthyThresholdCount: 5
       VpcId: !Ref VPC
-      TargetGroupAttributes:
-        - Key: stickiness.enabled
-          Value: 'true'
-        - Key: stickiness.type
-          Value: lb_cookie
-        - Key: stickiness.lb_cookie.duration_seconds
-          Value: '30'
   WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -206,15 +199,15 @@ Resources:
         systemctl restart docker
   WebServerAS:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
-    Properties: 
-      LaunchConfigurationName: !Ref Docker
-      TargetGroupARNs: 
+    Properties:
+      TargetGroupARNs:
         - !Ref ALBTargetGroup
-      MaxSize: 2
+      LaunchConfigurationName: !Ref Docker
       MinSize: 1
-      VPCZoneIdentifier: 
-        - !Ref PublicSubnetA
-        - !Ref PublicSubnetB        
+      MaxSize: 2
+      AvailabilityZones:
+        Fn::GetAZs: 
+          Ref: "AWS::Region"       
   ScalingUpPolicy:    
     Type: 'AWS::AutoScaling::ScalingPolicy'
     Properties: 
@@ -256,7 +249,7 @@ Resources:
       Namespace: AWS/EC2
       Period: 300
       Statistic: Average
-      Threshold: 75
+      Threshold: 80
   CPULowAlarm:
     Type: 'AWS::CloudWatch::Alarm'
     Properties: 
@@ -274,4 +267,4 @@ Resources:
       Namespace: AWS/EC2
       Period: 300
       Statistic: Average
-      Threshold: 25        
+      Threshold: 20                      
