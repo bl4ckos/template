@@ -1,9 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: >-
-  AWS CloudFormation VPC Template
+Description: AWS CloudFormation VPC Template
 Parameters:
   VpcCidrBlock:
-    Type: 'String'
+    Type: String
     Default: 10.0.0.0/16
     Description: Enter the main VPC CIDR block.
 Resources:
@@ -13,7 +12,10 @@ Resources:
       CidrBlock: !Ref VpcCidrBlock
       Tags:
         - Key: Name
-          Value: 'MainVPC'
+          Value: MainVPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 75fd5aaf-2c50-4ede-9d42-89258c744451
   PublicSubnetA:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -21,9 +23,12 @@ Resources:
       CidrBlock: 10.0.1.0/24
       Tags:
         - Key: Name
-          Value: 'MainVPC-public-a'
+          Value: MainVPC-public-a
       VpcId: !Ref VPC
-      MapPublicIpOnLaunch: True
+      MapPublicIpOnLaunch: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 509e37d5-f6fc-4be9-a718-de6258d4a0c9
   PublicSubnetB:
     Type: 'AWS::EC2::Subnet'
     Properties:
@@ -31,20 +36,29 @@ Resources:
       CidrBlock: 10.0.2.0/24
       Tags:
         - Key: Name
-          Value: 'MainVPC-public-b'
+          Value: MainVPC-public-b
       VpcId: !Ref VPC
-      MapPublicIpOnLaunch: True
+      MapPublicIpOnLaunch: true
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: aec2e21e-8e29-48fa-bd8e-eab2d6f803cd
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
     Properties:
       Tags:
         - Key: Name
-          Value: 'MainVPC-InternetGateway'
+          Value: MainVPC-InternetGateway
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 31ce71ae-8dac-4f00-8264-53034a107f45
   AttachInternetGateway:
     Type: 'AWS::EC2::VPCGatewayAttachment'
     Properties:
       VpcId: !Ref VPC
       InternetGatewayId: !Ref InternetGateway
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 308f61b1-5d81-455c-a63e-27425e2fb44e
   PublicRouteTableA:
     Type: 'AWS::EC2::RouteTable'
     Properties:
@@ -52,11 +66,17 @@ Resources:
       Tags:
         - Key: Name
           Value: MainVPC-route-public-a
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 43512917-54b1-447c-9fa1-73c8d3edfa75
   AttachPublicRouteTableA:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       RouteTableId: !Ref PublicRouteTableA
       SubnetId: !Ref PublicSubnetA
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 7c121e8a-5a3e-40c3-9f26-b84534e4e6de
   PublicRouteTableB:
     Type: 'AWS::EC2::RouteTable'
     Properties:
@@ -64,32 +84,50 @@ Resources:
       Tags:
         - Key: Name
           Value: MainVPC-route-public-b
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e578296f-5016-443c-ac5a-788c8419d636
   AttachPublicRouteTableB:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     Properties:
       RouteTableId: !Ref PublicRouteTableB
       SubnetId: !Ref PublicSubnetB
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: f7f98934-cba8-4ade-bf61-88dbe2420336
   PublicRouteA:
     Type: 'AWS::EC2::Route'
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
       RouteTableId: !Ref PublicRouteTableA
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: a074e6b0-b31b-4709-81f5-f2d96534d3bf
   PublicRouteB:
     Type: 'AWS::EC2::Route'
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
       RouteTableId: !Ref PublicRouteTableB
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 7447050c-b8c5-4347-8b83-22dedb5fe294
   ApplicationLoadBalancer:
     Type: 'AWS::ElasticLoadBalancingV2::LoadBalancer'
-    Properties: 
+    Properties:
       IpAddressType: ipv4
-      Subnets: 
+      Subnets:
         - !Ref PublicSubnetA
         - !Ref PublicSubnetB
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref WebServerSecurityGroup
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: fbac0ff7-cf63-4a78-a0ea-495440c0bff4
   myDNSRecord:
-    Type: AWS::Route53::RecordSet
+    Type: 'AWS::Route53::RecordSet'
     Properties:
       HostedZoneId: ZVX7CC41DQQ7B
       Name: marvin-a.site.
@@ -97,6 +135,9 @@ Resources:
       TTL: '900'
       ResourceRecords:
         - '"v=spf1 ip4:10.0.0.1/16 -all"'
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 0ba2901a-5e7a-403e-85a7-76997b8f1916
   ALBListener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
@@ -106,6 +147,9 @@ Resources:
       LoadBalancerArn: !Ref ApplicationLoadBalancer
       Port: '80'
       Protocol: HTTP
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 718a5b0e-782d-4cd5-867f-d303d3c62450
   ALBTargetGroup:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
@@ -116,6 +160,9 @@ Resources:
       Protocol: HTTP
       UnhealthyThresholdCount: 5
       VpcId: !Ref VPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e1e46efd-efc8-4662-8baf-1be2b6dbecb8
   WebServerSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -133,30 +180,38 @@ Resources:
           FromPort: '22'
           ToPort: '22'
       VpcId: !Ref VPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 325a5377-8aac-49ff-b247-cd7e81efe833
   DBEC2SecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Open database for access
       VpcId: !Ref VPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: a4f87601-62c2-4b18-bdb8-52aea272aae0
   IngressRule:
-    Type: AWS::EC2::SecurityGroupIngress
+    Type: 'AWS::EC2::SecurityGroupIngress'
     Properties:
-      FromPort: "3306"
-      ToPort: "3306"
+      FromPort: '3306'
+      ToPort: '3306'
       GroupId: !Ref DBEC2SecurityGroup
       IpProtocol: tcp
       CidrIp: 0.0.0.0/0
   myDBSubnetGroup:
-    Type: 'AWS::RDS::DBSubnetGroup' 
-    Properties: 
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
       DBSubnetGroupDescription: description
-      SubnetIds: 
+      SubnetIds:
         - !Ref PublicSubnetA
         - !Ref PublicSubnetB
-      Tags: 
-        - 
-          Key: Name
-          Value: VPCSubRDS      
+      Tags:
+        - Key: Name
+          Value: VPCSubRDS
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: e45232b4-1104-49f4-88b4-a303fdf18c11
   DBInstance:
     Type: 'AWS::RDS::DBInstance'
     Properties:
@@ -165,38 +220,67 @@ Resources:
       DBInstanceClass: db.t2.micro
       AllocatedStorage: 20
       DBSubnetGroupName: !Ref myDBSubnetGroup
-      PubliclyAccessible: false 
-      DBSnapshotIdentifier: arn:aws:rds:eu-west-1:648183606597:snapshot:wordpress  
-      VPCSecurityGroups: 
-          - !Ref DBEC2SecurityGroup
+      PubliclyAccessible: false
+      DBSnapshotIdentifier: 'arn:aws:rds:eu-west-1:648183606597:snapshot:wordpress'
+      VPCSecurityGroups:
+        - !Ref DBEC2SecurityGroup
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 01355a06-480a-4f44-8285-539889264bc6
   Docker:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
-    Properties: 
+    Properties:
       ImageId: ami-07a3c7461cc82f8ff
       InstanceType: t2.micro
       KeyName: wordpress
-      SecurityGroups: 
-      - !Ref WebServerSecurityGroup
-      UserData: !Base64 |
+      SecurityGroups:
+        - !Ref WebServerSecurityGroup
+      UserData: !Base64 >
         #!/bin/bash
+
         apt-get update -qq
+
         apt-get install -y apt-transport-https ca-certificates
-        apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
-        echo "deb https://apt.dockerproject.org/repo ubuntu-xenial main" | tee /etc/apt/sources.list.d/docker.list
+
+        apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys
+        58118E89F3A912897C070ADBF76221572C52609D
+
+        echo "deb https://apt.dockerproject.org/repo ubuntu-xenial main" | tee
+        /etc/apt/sources.list.d/docker.list
+
         apt-get update -qq
+
         apt-get purge lxc-docker || true
-        apt-get -y install linux-image-extra-$(uname -r) linux-image-extra-virtual
+
+        apt-get -y install linux-image-extra-$(uname -r)
+        linux-image-extra-virtual
+
         apt-get -y install docker-engine
+
         usermod -aG docker ubuntu
+
         mkdir -p /etc/systemd/system/docker.service.d
-        printf "[Service]\nExecStart=\nExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:2375\n" >>  /etc/systemd/system/docker.service.d/docker.conf
+
+        printf "[Service]\nExecStart=\nExecStart=/usr/bin/dockerd -H fd:// -H
+        tcp://0.0.0.0:2375\n" >> 
+        /etc/systemd/system/docker.service.d/docker.conf
+
         docker pull wordpress
-        https://wordpresswp.s3-eu-west-1.amazonaws.com/temp/latest.tar.gz /etc/www/html/
+
+        https://wordpresswp.s3-eu-west-1.amazonaws.com/temp/latest.tar.gz
+        /etc/www/html/
+
         cd /etc/www/html/
+
         tar xzvf latest.tar.gz
+
         systemctl daemon-reload
+
         systemctl restart docker
-      ClassicLinkVPCId: !Ref VPC  
+      ClassicLinkVPCId: !Ref VPC
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 4de22f92-8aae-49c4-a6d6-4c0b8bbe465e
   WebServerAS:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     Properties:
@@ -207,41 +291,56 @@ Resources:
       MaxSize: 2
       VPCZoneIdentifier:
         - !Ref PublicSubnetA
-        - !Ref PublicSubnetB      
-  ScalingUpPolicy:    
+        - !Ref PublicSubnetB
+      NotificationConfigurations:
+        - TopicARN:
+            Ref: Notification
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 26ef73d2-0d7e-402a-83c9-c7e61c407cfd
+  ScalingUpPolicy:
     Type: 'AWS::AutoScaling::ScalingPolicy'
-    Properties: 
+    Properties:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref WebServerAS
       PolicyType: SimpleScaling
       Cooldown: 300
       ScalingAdjustment: 1
-  ScalingDownPolicy:    
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 67f41ee5-2167-4a2c-82e4-b536cebf0079
+  ScalingDownPolicy:
     Type: 'AWS::AutoScaling::ScalingPolicy'
-    Properties: 
+    Properties:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref WebServerAS
       Cooldown: 300
       PolicyType: SimpleScaling
       ScalingAdjustment: -1
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 006f91d4-71d0-402d-8d8c-321bac823759
   Notification:
     Type: 'AWS::SNS::Topic'
-    Properties: 
+    Properties:
       DisplayName: Mailtest
-      Subscription: 
+      Subscription:
         - Endpoint: marvin.asselino@laposte.net
           Protocol: email
       TopicName: Mailtest
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: f4f7697a-8957-40b2-a7d3-7b5c0a5aa21d
   CPUHighAlarm:
     Type: 'AWS::CloudWatch::Alarm'
-    Properties: 
-      AlarmActions: 
+    Properties:
+      AlarmActions:
         - !Ref ScalingUpPolicy
         - !Ref Notification
       AlarmDescription: Alarm if CPU load is high
       AlarmName: CPUHighAlarm
       ComparisonOperator: GreaterThanThreshold
-      Dimensions: 
+      Dimensions:
         - Name: AutoScalingGroupName
         - Value: !Ref WebServerAS
       EvaluationPeriods: 1
@@ -250,16 +349,19 @@ Resources:
       Period: 300
       Statistic: Average
       Threshold: 80
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: b1e2665e-9498-4d33-9237-14d87275950c
   CPULowAlarm:
     Type: 'AWS::CloudWatch::Alarm'
-    Properties: 
-      AlarmActions: 
+    Properties:
+      AlarmActions:
         - !Ref ScalingDownPolicy
         - !Ref Notification
       AlarmDescription: Alarm if CPU load is low.
       AlarmName: CPULowAlarm
       ComparisonOperator: LessThanThreshold
-      Dimensions: 
+      Dimensions:
         - Name: AutoScalingGroupName
         - Value: !Ref WebServerAS
       EvaluationPeriods: 1
@@ -267,4 +369,391 @@ Resources:
       Namespace: AWS/EC2
       Period: 300
       Statistic: Average
-      Threshold: 20                      
+      Threshold: 20
+    Metadata:
+      'AWS::CloudFormation::Designer':
+        id: 88f3ada8-20d8-4c8a-9e65-027a26a2b158
+Metadata:
+  'AWS::CloudFormation::Designer':
+    f4f7697a-8957-40b2-a7d3-7b5c0a5aa21d:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 490
+        'y': 750
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+    0ba2901a-5e7a-403e-85a7-76997b8f1916:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 750
+        'y': 230
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+    31ce71ae-8dac-4f00-8264-53034a107f45:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 430
+        'y': 110
+      z: 0
+      embeds: []
+    75fd5aaf-2c50-4ede-9d42-89258c744451:
+      size:
+        width: 780
+        height: 690
+      position:
+        x: 140
+        'y': 190
+      z: 1
+      embeds:
+        - f4f7697a-8957-40b2-a7d3-7b5c0a5aa21d
+        - 0ba2901a-5e7a-403e-85a7-76997b8f1916
+        - a4f87601-62c2-4b18-bdb8-52aea272aae0
+        - e1e46efd-efc8-4662-8baf-1be2b6dbecb8
+        - e578296f-5016-443c-ac5a-788c8419d636
+        - 43512917-54b1-447c-9fa1-73c8d3edfa75
+        - aec2e21e-8e29-48fa-bd8e-eab2d6f803cd
+        - 509e37d5-f6fc-4be9-a718-de6258d4a0c9
+        - e45232b4-1104-49f4-88b4-a303fdf18c11
+        - fbac0ff7-cf63-4a78-a0ea-495440c0bff4
+        - 325a5377-8aac-49ff-b247-cd7e81efe833
+        - 4de22f92-8aae-49c4-a6d6-4c0b8bbe465e
+        - 26ef73d2-0d7e-402a-83c9-c7e61c407cfd
+        - 006f91d4-71d0-402d-8d8c-321bac823759
+        - 88f3ada8-20d8-4c8a-9e65-027a26a2b158
+        - 67f41ee5-2167-4a2c-82e4-b536cebf0079
+        - b1e2665e-9498-4d33-9237-14d87275950c
+        - 718a5b0e-782d-4cd5-867f-d303d3c62450
+    a4f87601-62c2-4b18-bdb8-52aea272aae0:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 330
+        'y': 540
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      iscontainedinside:
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+    e1e46efd-efc8-4662-8baf-1be2b6dbecb8:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 460
+        'y': 230
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      iscontainedinside:
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+    e578296f-5016-443c-ac5a-788c8419d636:
+      size:
+        width: 100
+        height: 110
+      position:
+        x: 280
+        'y': 210
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds:
+        - 7447050c-b8c5-4347-8b83-22dedb5fe294
+      iscontainedinside:
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+    7447050c-b8c5-4347-8b83-22dedb5fe294:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 290
+        'y': 210
+      z: 3
+      parent: e578296f-5016-443c-ac5a-788c8419d636
+      embeds: []
+      isassociatedwith:
+        - 31ce71ae-8dac-4f00-8264-53034a107f45
+      iscontainedinside:
+        - e578296f-5016-443c-ac5a-788c8419d636
+        - e578296f-5016-443c-ac5a-788c8419d636
+        - e578296f-5016-443c-ac5a-788c8419d636
+        - e578296f-5016-443c-ac5a-788c8419d636
+        - e578296f-5016-443c-ac5a-788c8419d636
+        - e578296f-5016-443c-ac5a-788c8419d636
+        - e578296f-5016-443c-ac5a-788c8419d636
+    43512917-54b1-447c-9fa1-73c8d3edfa75:
+      size:
+        width: 100
+        height: 110
+      position:
+        x: 160
+        'y': 220
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds:
+        - a074e6b0-b31b-4709-81f5-f2d96534d3bf
+      iscontainedinside:
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+    a074e6b0-b31b-4709-81f5-f2d96534d3bf:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 190
+        'y': 250
+      z: 3
+      parent: 43512917-54b1-447c-9fa1-73c8d3edfa75
+      embeds: []
+      isassociatedwith:
+        - 31ce71ae-8dac-4f00-8264-53034a107f45
+      iscontainedinside:
+        - 43512917-54b1-447c-9fa1-73c8d3edfa75
+        - 43512917-54b1-447c-9fa1-73c8d3edfa75
+        - 43512917-54b1-447c-9fa1-73c8d3edfa75
+        - 43512917-54b1-447c-9fa1-73c8d3edfa75
+        - 43512917-54b1-447c-9fa1-73c8d3edfa75
+        - 43512917-54b1-447c-9fa1-73c8d3edfa75
+        - 43512917-54b1-447c-9fa1-73c8d3edfa75
+    308f61b1-5d81-455c-a63e-27425e2fb44e:
+      source:
+        id: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      target:
+        id: 31ce71ae-8dac-4f00-8264-53034a107f45
+      z: 1
+    aec2e21e-8e29-48fa-bd8e-eab2d6f803cd:
+      size:
+        width: 120
+        height: 80
+      position:
+        x: 280
+        'y': 360
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      iscontainedinside:
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+    f7f98934-cba8-4ade-bf61-88dbe2420336:
+      source:
+        id: e578296f-5016-443c-ac5a-788c8419d636
+      target:
+        id: aec2e21e-8e29-48fa-bd8e-eab2d6f803cd
+      z: 2
+    509e37d5-f6fc-4be9-a718-de6258d4a0c9:
+      size:
+        width: 110
+        height: 80
+      position:
+        x: 160
+        'y': 370
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      iscontainedinside:
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+    e45232b4-1104-49f4-88b4-a303fdf18c11:
+      size:
+        width: 120
+        height: 160
+      position:
+        x: 210
+        'y': 650
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds:
+        - 01355a06-480a-4f44-8285-539889264bc6
+      iscontainedinside:
+        - 509e37d5-f6fc-4be9-a718-de6258d4a0c9
+        - aec2e21e-8e29-48fa-bd8e-eab2d6f803cd
+    01355a06-480a-4f44-8285-539889264bc6:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 240
+        'y': 710
+      z: 3
+      parent: e45232b4-1104-49f4-88b4-a303fdf18c11
+      embeds: []
+      isassociatedwith:
+        - a4f87601-62c2-4b18-bdb8-52aea272aae0
+      iscontainedinside:
+        - e45232b4-1104-49f4-88b4-a303fdf18c11
+        - e45232b4-1104-49f4-88b4-a303fdf18c11
+        - e45232b4-1104-49f4-88b4-a303fdf18c11
+        - e45232b4-1104-49f4-88b4-a303fdf18c11
+        - e45232b4-1104-49f4-88b4-a303fdf18c11
+        - e45232b4-1104-49f4-88b4-a303fdf18c11
+        - e45232b4-1104-49f4-88b4-a303fdf18c11
+    fbac0ff7-cf63-4a78-a0ea-495440c0bff4:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 530
+        'y': 370
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      iscontainedinside:
+        - 509e37d5-f6fc-4be9-a718-de6258d4a0c9
+        - aec2e21e-8e29-48fa-bd8e-eab2d6f803cd
+    325a5377-8aac-49ff-b247-cd7e81efe833:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 530
+        'y': 490
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      iscontainedinside:
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+    4de22f92-8aae-49c4-a6d6-4c0b8bbe465e:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 530
+        'y': 570
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      isassociatedwith:
+        - 325a5377-8aac-49ff-b247-cd7e81efe833
+      iscontainedinside:
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+        - 75fd5aaf-2c50-4ede-9d42-89258c744451
+    26ef73d2-0d7e-402a-83c9-c7e61c407cfd:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 390
+        'y': 690
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      isassociatedwith:
+        - 4de22f92-8aae-49c4-a6d6-4c0b8bbe465e
+        - e1e46efd-efc8-4662-8baf-1be2b6dbecb8
+        - f4f7697a-8957-40b2-a7d3-7b5c0a5aa21d
+      iscontainedinside:
+        - 509e37d5-f6fc-4be9-a718-de6258d4a0c9
+        - aec2e21e-8e29-48fa-bd8e-eab2d6f803cd
+    006f91d4-71d0-402d-8d8c-321bac823759:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 780
+        'y': 660
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      isassociatedwith:
+        - 26ef73d2-0d7e-402a-83c9-c7e61c407cfd
+    88f3ada8-20d8-4c8a-9e65-027a26a2b158:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 640
+        'y': 690
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+    67f41ee5-2167-4a2c-82e4-b536cebf0079:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 770
+        'y': 750
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      isassociatedwith:
+        - 26ef73d2-0d7e-402a-83c9-c7e61c407cfd
+    b1e2665e-9498-4d33-9237-14d87275950c:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 640
+        'y': 780
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+    718a5b0e-782d-4cd5-867f-d303d3c62450:
+      size:
+        width: 60
+        height: 60
+      position:
+        x: 540
+        'y': 230
+      z: 2
+      parent: 75fd5aaf-2c50-4ede-9d42-89258c744451
+      embeds: []
+      isassociatedwith:
+        - fbac0ff7-cf63-4a78-a0ea-495440c0bff4
+    7c121e8a-5a3e-40c3-9f26-b84534e4e6de:
+      source:
+        id: 43512917-54b1-447c-9fa1-73c8d3edfa75
+      target:
+        id: 509e37d5-f6fc-4be9-a718-de6258d4a0c9
+      z: 2
